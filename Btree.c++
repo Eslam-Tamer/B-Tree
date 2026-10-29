@@ -145,8 +145,8 @@ private:
             // Go to the selected child
             Node<Type, Ord>* newRightChild =
                 insertRecursive(parent->child[i],
-                                value,
-                                childPromotedKey);
+                    value,
+                    childPromotedKey);
 
             // If the child split, update this parent
             if (newRightChild != nullptr)
@@ -206,10 +206,230 @@ private:
             for (int i = 0; i <= parent->num_keys; i++)
             {
                 printAtDepth(parent->child[i],
-                             currentDepth + 1,
-                             targetDepth);
+                    currentDepth + 1,
+                    targetDepth);
             }
         }
+    }
+
+    // Minimum number of keys a non-root node must have
+    int minKeys()
+    {
+        return (Ord + 1) / 2 - 1;
+    }
+
+    // Search recursively
+    bool searchRecursive(Node<Type, Ord>* node, const Type& value)
+    {
+        if (node == nullptr)
+        {
+            return false;
+        }
+
+        int i = 0;
+        while (i < node->num_keys && node->key[i] < value)
+        {
+            i++;
+        }
+
+        if (i < node->num_keys && node->key[i] == value)
+        {
+            return true;
+        }
+
+        if (node->is_leaf)
+        {
+            return false;
+        }
+
+        InternalNode<Type, Ord>* parent =
+            static_cast<InternalNode<Type, Ord>*>(node);
+
+        return searchRecursive(parent->child[i], value);
+    }
+
+    // Take one key from the left sibling
+    void borrowFromLeft(InternalNode<Type, Ord>* parent, int i)
+    {
+        Node<Type, Ord>* child = parent->child[i];
+        Node<Type, Ord>* left = parent->child[i - 1];
+
+        for (int j = child->num_keys - 1; j >= 0; j--)
+        {
+            child->key[j + 1] = child->key[j];
+        }
+
+        if (!child->is_leaf)
+        {
+            InternalNode<Type, Ord>* c = static_cast<InternalNode<Type, Ord>*>(child);
+            InternalNode<Type, Ord>* l = static_cast<InternalNode<Type, Ord>*>(left);
+
+            for (int j = child->num_keys; j >= 0; j--)
+            {
+                c->child[j + 1] = c->child[j];
+            }
+
+            c->child[0] = l->child[left->num_keys];
+        }
+
+        child->key[0] = parent->key[i - 1];
+        parent->key[i - 1] = left->key[left->num_keys - 1];
+
+        left->num_keys--;
+        child->num_keys++;
+    }
+
+    // Take one key from the right sibling
+    void borrowFromRight(InternalNode<Type, Ord>* parent, int i)
+    {
+        Node<Type, Ord>* child = parent->child[i];
+        Node<Type, Ord>* right = parent->child[i + 1];
+
+        child->key[child->num_keys] = parent->key[i];
+
+        if (!child->is_leaf)
+        {
+            InternalNode<Type, Ord>* c = static_cast<InternalNode<Type, Ord>*>(child);
+            InternalNode<Type, Ord>* r = static_cast<InternalNode<Type, Ord>*>(right);
+
+            c->child[child->num_keys + 1] = r->child[0];
+
+            for (int j = 1; j <= right->num_keys; j++)
+            {
+                r->child[j - 1] = r->child[j];
+            }
+        }
+
+        parent->key[i] = right->key[0];
+
+        for (int j = 1; j < right->num_keys; j++)
+        {
+            right->key[j - 1] = right->key[j];
+        }
+
+        right->num_keys--;
+        child->num_keys++;
+    }
+
+    // Merge child i, separator key[i], and child i+1 into child i
+    void mergeChildren(InternalNode<Type, Ord>* parent, int i)
+    {
+        Node<Type, Ord>* left = parent->child[i];
+        Node<Type, Ord>* right = parent->child[i + 1];
+
+        left->key[left->num_keys] = parent->key[i];
+
+        for (int j = 0; j < right->num_keys; j++)
+        {
+            left->key[left->num_keys + 1 + j] = right->key[j];
+        }
+
+        if (!left->is_leaf)
+        {
+            InternalNode<Type, Ord>* l = static_cast<InternalNode<Type, Ord>*>(left);
+            InternalNode<Type, Ord>* r = static_cast<InternalNode<Type, Ord>*>(right);
+
+            for (int j = 0; j <= right->num_keys; j++)
+            {
+                l->child[left->num_keys + 1 + j] = r->child[j];
+            }
+        }
+
+        left->num_keys += right->num_keys + 1;
+
+        for (int j = i; j < parent->num_keys - 1; j++)
+        {
+            parent->key[j] = parent->key[j + 1];
+        }
+
+        for (int j = i + 1; j < parent->num_keys; j++)
+        {
+            parent->child[j] = parent->child[j + 1];
+        }
+
+        parent->num_keys--;
+
+        delete right;
+    }
+
+    // Repair child i if it has too few keys
+    void fixChild(InternalNode<Type, Ord>* parent, int i)
+    {
+        if (parent->child[i]->num_keys >= minKeys())
+        {
+            return;
+        }
+
+        if (i > 0 && parent->child[i - 1]->num_keys > minKeys())
+        {
+            borrowFromLeft(parent, i);
+        }
+        else if (i < parent->num_keys && parent->child[i + 1]->num_keys > minKeys())
+        {
+            borrowFromRight(parent, i);
+        }
+        else if (i < parent->num_keys)
+        {
+            mergeChildren(parent, i);
+        }
+        else
+        {
+            mergeChildren(parent, i - 1);
+        }
+    }
+
+    // Delete recursively
+    void removeRecursive(Node<Type, Ord>* node, const Type& value)
+    {
+        int i = 0;
+        while (i < node->num_keys && node->key[i] < value)
+        {
+            i++;
+        }
+
+        bool found = (i < node->num_keys && node->key[i] == value);
+
+        // Case 1: leaf
+        if (node->is_leaf)
+        {
+            if (found)
+            {
+                for (int j = i; j < node->num_keys - 1; j++)
+                {
+                    node->key[j] = node->key[j + 1];
+                }
+
+                node->num_keys--;
+            }
+
+            return;
+        }
+
+        InternalNode<Type, Ord>* parent =
+            static_cast<InternalNode<Type, Ord>*>(node);
+
+        if (found)
+        {
+            // Case 2: key in internal node, replace with predecessor
+            Node<Type, Ord>* cur = parent->child[i];
+
+            while (!cur->is_leaf)
+            {
+                cur = static_cast<InternalNode<Type, Ord>*>(cur)->child[cur->num_keys];
+            }
+
+            Type pred = cur->key[cur->num_keys - 1];
+
+            parent->key[i] = pred;
+            removeRecursive(parent->child[i], pred);
+        }
+        else
+        {
+            // Case 3: go down
+            removeRecursive(parent->child[i], value);
+        }
+
+        fixChild(parent, i);
     }
 
 public:
@@ -254,22 +474,65 @@ public:
         printAtDepth(root, 0, depth);
         cout << '\n';
     }
+
+    bool search(const Type& value)
+    {
+        return searchRecursive(root, value);
+    }
+
+    bool remove(const Type& value)
+    {
+        if (root == nullptr || !search(value))
+        {
+            return false;
+        }
+
+        removeRecursive(root, value);
+
+        // If the root became empty, shrink the tree
+        if (root->num_keys == 0)
+        {
+            if (root->is_leaf)
+            {
+                delete root;
+                root = nullptr;
+            }
+            else
+            {
+                InternalNode<Type, Ord>* oldRoot =
+                    static_cast<InternalNode<Type, Ord>*>(root);
+
+                root = oldRoot->child[0];
+                delete oldRoot;
+            }
+        }
+
+        return true;
+    }
 };
 
 int main()
 {
     BTree<int, 3> tree;
 
-    int values[] = {10, 20, 5, 6, 12, 30, 7, 17, 3};
-
+    int values[] = { 10, 20, 5, 6, 12, 30, 7, 17, 3 };
     for (int value : values)
-    {
         tree.insert(value);
-    }
 
-    tree.displayAtDepth(0);
-    tree.displayAtDepth(1);
-    tree.displayAtDepth(2);
+    cout << "--- Before delete ---\n";
+    for (int d = 0; d < 3; d++) tree.displayAtDepth(d);
+
+    cout << "search(17): " << tree.search(17) << '\n';   
+    cout << "search(99): " << tree.search(99) << '\n';   
+
+    tree.remove(6);    
+    for (int d = 0; d < 3; d++) tree.displayAtDepth(d);
+
+    tree.remove(10);   
+    tree.remove(3);
+
+    cout << "--- After delete ---\n";
+    for (int d = 0; d < 3; d++) tree.displayAtDepth(d);
 
     return 0;
 }
