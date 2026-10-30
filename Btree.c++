@@ -519,7 +519,6 @@ int main()
     for (int value : values)
         tree.insert(value);
 
-    cout << "--- Before delete ---\n";
     for (int d = 0; d < 3; d++) tree.displayAtDepth(d);
 
     cout << "search(17): " << tree.search(17) << '\n';   
@@ -531,7 +530,6 @@ int main()
     tree.remove(10);   
     tree.remove(3);
 
-    cout << "--- After delete ---\n";
     for (int d = 0; d < 3; d++) tree.displayAtDepth(d);
 
     return 0;
