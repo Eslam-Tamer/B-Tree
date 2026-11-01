@@ -179,6 +179,7 @@ private:
 
     // Print all Nodes at a given depth
     // the main idea is , we start from root (0) and search for the target depth 
+    // Print the whole tree depth-first (preorder)
     void printAtDepth(
         Node<Type, Ord>* node,
         int currentDepth,
@@ -187,19 +188,16 @@ private:
         if (node == nullptr)
             return;
 
-        if (currentDepth == targetDepth)
+        for (int i = 0; i < currentDepth; i++)
+            cout << "    ";
+
+        cout << "[ ";
+        for (int i = 0; i < node->num_keys; i++)
         {
-            cout << "[ ";
-
-            for (int i = 0; i < node->num_keys; i++)
-            {
-                cout << node->key[i] << " ";
-            }
-
-            cout << "] ";
-            return;
+            cout << node->key[i] << " ";
         }
-        // we not in the target depth , go to the next level
+        cout << "]\n";
+
         if (!node->is_leaf)
         {
             InternalNode<Type, Ord>* parent =
@@ -213,7 +211,6 @@ private:
             }
         }
     }
-
     // Minimum number of keys a non-root node must have
     int minKeys()
     {
@@ -470,11 +467,9 @@ public:
         }
     }
 
-    void displayAtDepth(int depth)
+    void displayAtDepth()
     {
-        cout << "Depth " << depth << ": ";
-        printAtDepth(root, 0, depth);
-        cout << '\n';
+        printAtDepth(root, 0, 0);
     }
 
     bool search(const Type& value)
@@ -521,18 +516,18 @@ int main()
     for (int value : values)
         tree.insert(value);
 
-    for (int d = 0; d < 3; d++) tree.displayAtDepth(d);
+     tree.displayAtDepth();
 
     cout << "search(17): " << tree.search(17) << '\n';
     cout << "search(99): " << tree.search(99) << '\n';
 
     tree.remove(6);
-    for (int d = 0; d < 3; d++) tree.displayAtDepth(d);
+     tree.displayAtDepth();
 
     tree.remove(10);
     tree.remove(3);
 
-    for (int d = 0; d < 3; d++) tree.displayAtDepth(d);
+    tree.displayAtDepth();
 
     return 0;
 }
