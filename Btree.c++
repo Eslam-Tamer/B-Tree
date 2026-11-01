@@ -1,3 +1,5 @@
+// Eslam Tamer - 20230057
+// Ahmed Ashraf - 20240013
 
 #include <iostream>
 using namespace std;
@@ -521,13 +523,13 @@ int main()
 
     for (int d = 0; d < 3; d++) tree.displayAtDepth(d);
 
-    cout << "search(17): " << tree.search(17) << '\n';   
-    cout << "search(99): " << tree.search(99) << '\n';   
+    cout << "search(17): " << tree.search(17) << '\n';
+    cout << "search(99): " << tree.search(99) << '\n';
 
-    tree.remove(6);    
+    tree.remove(6);
     for (int d = 0; d < 3; d++) tree.displayAtDepth(d);
 
-    tree.remove(10);   
+    tree.remove(10);
     tree.remove(3);
 
     for (int d = 0; d < 3; d++) tree.displayAtDepth(d);
